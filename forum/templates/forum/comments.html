@@ -1,0 +1,23 @@
+{% for comment in comments %}
+<div class="card mb-3" id="comment-{{ comment.id }}">
+    <div class="card-body">
+        <p class="mb-1"><strong>{{ comment.author.username }}</strong>：{{ comment.content }}</p>
+        {% if comment.image %}
+        <img src="{{ comment.image.url }}" alt="评论图片" class="img-fluid rounded mb-2" style="max-width: 200px;">
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center">
+            <button class="btn btn-outline-secondary btn-sm" onclick="replyTo('{{ comment.author.username }}')">回复</button>
+            {% if comment.author == user or user.is_superuser %}
+            <a href="{% url 'delete_comment' comment.id %}" class="btn btn-outline-danger btn-sm">删除</a>
+            {% endif %}
+        </div>
+    </div>
+    {% if comment.comment_set.all %}
+    <div class="card mt-3 ms-4">
+        <div class="card-body">
+            {% include "forum/comments.html" with comments=comment.comment_set.all %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}

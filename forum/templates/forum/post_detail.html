@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ post.title }}</title>
+    <!-- 引入 Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .delete-post { color: red; float: right; }
+        .comment { border-left: 2px solid #eee; padding-left: 10px; margin-bottom: 15px; }
+        .replies { margin-left: 20px; }
+        .post-image, .comment-image {
+            max-width: 100%; /* 限制图片宽度为容器宽度 */
+            max-height: 300px; /* 限制图片高度 */
+            object-fit: contain; /* 保持图片比例 */
+        }
+    </style>
+</head>
+<body class="container my-4">
+    <!-- 添加“回到论坛”模块 -->
+    <h1 class="mb-4">
+        <a href="{% url 'index' %}" class="text-decoration-none text-dark">回到论坛</a>
+    </h1>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h1 class="h5 mb-0">{{ post.title }}</h1>
+            {% if user == post.author or user.is_superuser %}
+            <a href="{% url 'delete_post' post.pk %}" 
+               class="btn btn-danger btn-sm" 
+               onclick="return confirm('确认删除该帖子？')">删除帖子</a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <p class="text-muted">作者：{{ post.author.username }} | {{ post.created_at|date:"Y-m-d H:i" }}</p>
+            <div class="content mb-3">
+                <!-- 使用 linebreaks 过滤器将换行符转换为 <br> -->
+                <p>{{ post.content|linebreaks }}</p>
+                {% if post.image %}
+                <img src="{{ post.image.url }}" alt="帖子图片" class="img-fluid rounded post-image">
+                {% endif %}
+            </div>
+            <div class="likes">
+                <button id="like-btn" class="btn btn-outline-primary btn-sm" data-post-id="{{ post.id }}">
+                    {% if user in post.likes.all %} 取消赞 {% else %} 点赞 {% endif %}
+                </button>
+                <span id="total-likes" class="ms-2">{{ post.likes.count }}</span> 人点赞
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="h6 mb-0">评论（{{ post.comment_set.count }}）</h3>
+        </div>
+        <div class="card-body">
+            <div class="comments">
+                {% for comment in comments %}
+                <div class="comment mb-3">
+                    <p><strong>{{ comment.author.username }}</strong>：{{ comment.content }}</p>
+                    {% if comment.image %}
+                    <img src="{{ comment.image.url }}" alt="评论图片" class="img-fluid rounded comment-image">
+                    {% endif %}
+                    <div class="actions mt-2">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="replyTo('{{ comment.author.username }}')">回复</button>
+                        {% if comment.author == user or user.is_superuser %}
+                        <a href="{% url 'delete_comment' comment.id %}" class="btn btn-outline-danger btn-sm">删除</a>
+                        {% endif %}
+                    </div>
+                    {% if comment.comment_set.all %}
+                    <div class="replies mt-3">
+                        {% include "forum/comments.html" with comments=comment.comment_set.all %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="h6 mb-0">请输入你的评论</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    {{ form.content }}
+                </div>
+                <div class="mb-3">
+                    {{ form.image }}
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">提交评论</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 引入 Bootstrap JS（可选） -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.getElementById('like-btn').addEventListener('click', function() {
+        const postId = this.dataset.postId;
+        fetch(`/post/${postId}/like/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('total-likes').textContent = data.total_likes;
+            this.textContent = data.liked ? '取消赞' : '点赞';
+        });
+    });
+
+    function replyTo(username) {
+        const textarea = document.querySelector('textarea[name="content"]');
+        textarea.value = `@${username} ` + textarea.value;
+        textarea.focus();
+    }
+    </script>
+</body>
+</html>
