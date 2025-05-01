@@ -15,4 +15,5 @@ To open the website, type:
 > python manage.py createsuperuser
 > 
 > python manage.py runserver
-and visit http://127.0.0.1:8000 in your browser.
+>
+> visit http://127.0.0.1:8000.
